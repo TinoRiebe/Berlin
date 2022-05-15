@@ -1,3 +1,4 @@
+
 from PyQt5.QtWidgets import *
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import QSize
@@ -11,7 +12,7 @@ class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         QMainWindow.__init__(self)
-        self.ui = loadUi('./ui/mainwindow/form.ui', self)
+        self.ui = loadUi('./ui/main/mainwindow.ui', self)
 
         self.filepath = './data'
         self.files = []
