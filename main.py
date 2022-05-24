@@ -8,6 +8,8 @@ import pandas as pd
 import numpy as np
 from math import ceil
 import matplotlib.pyplot as plt
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 
 class MainWindow(QMainWindow):
@@ -18,16 +20,17 @@ class MainWindow(QMainWindow):
 
         self.filepath = './data'
         self.files = []
-        self.pb_loadmsrfiles.clicked.connect(self.load_msr_files)
+        # self.pb_loadmsrfiles.clicked.connect(self.load_msr_files)
         self.pb_exit.clicked.connect(self.close)
         self.pb_exit.setStyleSheet('color: red')
         self.pb_test.clicked.connect(self.file_list)
         self.pb_convert.clicked.connect(self.convert_msr)
-        self.lw_txt.addItem('k')
+
         self.csv_list = []
         self.par_list = []
         self.mod_list = []
         self.file_list()
+
         self.head = ['cnt', 'ZDA_s', 'Lat_deg', 'Lon_deg', 'HDT_deg', 'COG_deg', 'SOG_kt', 'ROT_deg_min',
                      'VelocLin_gr_u_kt', 'VelocLin_gr_v_kt', 'VelocLin_tw_u_kt', 'VelocLin_tw_v_kt',
                      'AP_Drivemotor_Load1_perc', 'AP_RPM_Cmd1_perc', 'AP_RPM_Act1_perc', 'AP_Drivemotor_Load2_perc',
@@ -55,7 +58,6 @@ class MainWindow(QMainWindow):
                      'CP_NC_Pump_1_Run', 'CP_NC_Pump_2_Run', 'DDM_draught_FWD', 'DDM_draught_MID_PT',
                      'DDM_draught_MID_MID', 'DDM_draught_MID_SB', 'DDM_draught_AFT', 'Trim_m', 'Trim_deg',
                      'List_m', 'List_deg']
-
         self.drop = ['cnt', 'ZDA_s', 'Lat_deg', 'Lon_deg', 'HDT_deg', 'COG_deg', 'SOG_kt', 'ROT_deg_min',
                      'VelocLin_gr_u_kt', 'VelocLin_gr_v_kt', 'VelocLin_tw_u_kt', 'VelocLin_tw_v_kt',
                      'AP_Drivemotor_Load1_perc', 'AP_RPM_Cmd1_perc', 'AP_RPM_Act1_perc', 'AP_Drivemotor_Load2_perc',
@@ -85,33 +87,40 @@ class MainWindow(QMainWindow):
                      'List_m', 'List_deg']
 
     def convert_msr(self):
+        '''
+        :return: None
+
+        konvertiert alle noch nicht umgewandelten txt-Dateien
+
+        '''
         self.file_list()
         cnt = 0
         for name in self.csv_list:
             cnt += 1
-            if (name[0:-3] + 'pkl') not in self.par_list:
+            if (name[0:-3] + 'par') not in self.par_list:
+                # load data
                 data = pd.read_csv(os.path.join('./data', name), skiprows=2, sep='\t', decimal=',').astype('float32')
-                data.to_pickle(os.path.join('./data', (name[0:-3] + 'pkl')))
+                table = pa.Table.from_pandas(data)
+                pq.write_table(table, os.path.join('./data', name[0:-3] + 'par'))
                 i = int(ceil((100/len(self.csv_list))*cnt))
                 self.progressBar.setValue(i)
                 QApplication.processEvents()
         self.file_list()
 
-        data = pd.read_parquet(os.path.join('./data', (name[0:-3] + 'pkl')), skiprows=2, sep='\t', decimal=',').astype('float32')
-        plt.plot(data['cnt'], data['Lat_deg'])
-        plt.show()
-
+        # data = pd.read_parquet('./data/msr_180828_235959_180830_000000.par')
+        # fig, axs = plt.subplots(2, 2)
+        # axs[0, 0].plot(data['CP_NC_Backup_On'])
+        # axs[0, 0].set_title('CP_NC_Backup_On')
+        # axs[0, 1].plot(data['CP_NC_Sailing_Pos'])
+        # axs[0, 1].set_title('CP_NC_Sailing_Pos')
+        # axs[1, 0].plot(data['CP_NC_Speed_Pilot_in_Control'])
+        # axs[1, 0].set_title('CP_NC_Speed_Pilot_in_Control')
+        # axs[1, 1].plot(data['CP_NC_AP_in_Control'])
+        # axs[1, 1].set_title('CP_NC_AP_in_Control')
+        # plt.show()
 
     def load_msr_files(self):
-
-        self.lw_txt.clear()
-        self.lw_par.clear()
-        self.lw_mod.clear()
-
-        for i in range(11):
-            self.progressBar.setValue(i*10)
-            QApplication.processEvents()
-            sleep(0.5)
+        pass
 
     def file_list(self):
         while not os.path.isdir(self.filepath):
@@ -124,7 +133,7 @@ class MainWindow(QMainWindow):
         for file in self.files:
             if file[0:3] == 'msr' and file[-3:] == 'txt':
                 self.csv_list.append(file)
-            elif file[0:3] == 'msr' and file[-3:] == 'pkl':
+            elif file[0:3] == 'msr' and file[-3:] == 'par':
                 self.par_list.append(file)
             elif file[-5:] == '.hdf5':
                 self.mod_list.append(file)
